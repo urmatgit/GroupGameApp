@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using GroupGame.Application.Common.Interfaces;
-using GroupGame.Application.DTOs;
+using GroupGame.Application.Contracts;
 using GroupGame.Domain.Entities;
 using GroupGame.Domain.Enums;
 
