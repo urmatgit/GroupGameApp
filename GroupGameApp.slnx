@@ -1,7 +1,0 @@
-<Solution>
-  <Project Path="GroupGame.Admin/GroupGame.Admin.csproj" />
-  <Project Path="GroupGame.Api/GroupGame.Api.csproj" />
-  <Project Path="GroupGame.Application/GroupGame.Application.csproj" />
-  <Project Path="GroupGame.Domain/GroupGame.Domain.csproj" />
-  <Project Path="GroupGame.Infrastructure/GroupGame.Infrastructure.csproj" />
-</Solution>

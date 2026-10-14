@@ -1,0 +1,8 @@
+{
+  "name": "Group Game App",
+  "description": "Кроссплатформенная платформа для поиска, создания и организации групповых спортивных игр с управлением очередями (FIFO Waitlist), посещаемостью, рейтингами и админ-панелью.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
