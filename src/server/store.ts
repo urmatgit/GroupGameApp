@@ -799,6 +799,113 @@ class AppStore {
     this.auditLogs.unshift(log);
     return log;
   }
+
+  // --- Update Game ---
+  public updateGame(
+    gameId: string,
+    userId: string,
+    updates: Partial<{
+      title: string;
+      description: string;
+      rules: string;
+      maxPlayers: number;
+      price: number;
+      startDateTime: string;
+      endDateTime: string;
+      venueId: string;
+      cancellationDeadlineHours: number;
+    }>
+  ): Game {
+    const game = this.getGameById(gameId);
+    if (!game) throw new Error('Игра не найдена');
+
+    const user = this.getUserById(userId);
+    const isAdmin = user?.roles.includes('Administrator') || user?.roles.includes('Moderator');
+    if (game.organizerId !== userId && !isAdmin) {
+      throw new Error('Только организатор или администратор может редактировать игру');
+    }
+
+    if (updates.venueId && updates.venueId !== game.venueId) {
+      const venue = this.venues.find((v) => v.id === updates.venueId);
+      if (venue) {
+        game.venueId = venue.id;
+        game.venueName = venue.name;
+        game.venueAddress = `${venue.address}${venue.metro ? ` (м. ${venue.metro})` : ''}`;
+        game.latitude = venue.latitude;
+        game.longitude = venue.longitude;
+      }
+    }
+
+    if (updates.title !== undefined) game.title = updates.title;
+    if (updates.description !== undefined) game.description = updates.description;
+    if (updates.rules !== undefined) game.rules = updates.rules;
+    if (updates.maxPlayers !== undefined) {
+      game.maxPlayers = Number(updates.maxPlayers);
+      if (game.mainCount < game.maxPlayers && game.status === 'Full') {
+        game.status = 'Open';
+      }
+    }
+    if (updates.price !== undefined) game.price = Number(updates.price);
+    if (updates.startDateTime !== undefined) game.startDateTime = updates.startDateTime;
+    if (updates.endDateTime !== undefined) game.endDateTime = updates.endDateTime;
+    if (updates.cancellationDeadlineHours !== undefined) {
+      game.cancellationDeadlineHours = Number(updates.cancellationDeadlineHours);
+    }
+    game.updatedAt = new Date().toISOString();
+
+    // Notify all active participants about the update
+    game.participants
+      .filter((p) => p.status === 'Main' || p.status === 'Waitlist')
+      .forEach((p) => {
+        if (p.userId !== userId) {
+          this.addNotification(
+            p.userId,
+            'GAME_UPDATED',
+            `Параметры игры «${game.title}» обновлены`,
+            `Организатор обновил детали матча (${new Date(game.startDateTime).toLocaleDateString('ru-RU')}, ${game.venueName}). Проверьте актуальную информацию.`,
+            game.id
+          );
+        }
+      });
+
+    this.addAuditLog(
+      userId,
+      user ? `${user.firstName} ${user.lastName}` : 'User',
+      'UPDATE_GAME',
+      'Game',
+      game.id,
+      `Обновлена информация об игре «${game.title}»`
+    );
+
+    return game;
+  }
+
+  // --- Subscriptions ---
+  public changeSubscription(userId: string, planId: string): { user: User; plan: SubscriptionPlan } {
+    const user = this.getUserById(userId);
+    if (!user) throw new Error('Пользователь не найден');
+    const plan = this.plans.find((p) => p.id === planId);
+    if (!plan) throw new Error('Тарифный план не найден');
+
+    user.subscriptionPlanId = plan.id;
+    this.addNotification(
+      userId,
+      'JOIN_CONFIRMED',
+      `Тарифный план изменён на «${plan.name}»`,
+      `Ваша подписка успешно обновлена. Доступны привилегии тарифа: ${plan.description}.`
+    );
+
+    this.addAuditLog(
+      userId,
+      `${user.firstName} ${user.lastName}`,
+      'SUBSCRIPTION_CHANGE',
+      'Subscription',
+      plan.id,
+      `Пользователь сменил тариф на ${plan.name} (${plan.price} руб/${plan.period})`
+    );
+
+    return { user, plan };
+  }
 }
 
 export const store = new AppStore();

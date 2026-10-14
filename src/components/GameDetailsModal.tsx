@@ -28,6 +28,7 @@ interface GameDetailsModalProps {
   onOpenAttendance: (game: Game) => void;
   onOpenRating: (game: Game) => void;
   onOpenComplaint: (game: Game, targetUserId?: string) => void;
+  onOpenEdit?: (game: Game) => void;
 }
 
 export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
@@ -39,6 +40,7 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
   onOpenAttendance,
   onOpenRating,
   onOpenComplaint,
+  onOpenEdit,
 }) => {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'roster' | 'rules'>('roster');
@@ -477,9 +479,17 @@ export const GameDetailsModal: React.FC<GameDetailsModalProps> = ({
                 </div>
               )}
 
-              {/* Organizer / Admin: Cancel game */}
+              {/* Organizer / Admin: Edit & Cancel game */}
               {(isOrganizer || isAdmin) && !isCompleted && !isCancelled && (
-                <div>
+                <div className="flex items-center space-x-2">
+                  {onOpenEdit && (
+                    <button
+                      onClick={() => onOpenEdit(game)}
+                      className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                    >
+                      Редактировать
+                    </button>
+                  )}
                   {!showGameCancelPrompt ? (
                     <button
                       onClick={() => setShowGameCancelPrompt(true)}

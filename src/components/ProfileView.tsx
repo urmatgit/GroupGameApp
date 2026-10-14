@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
-import { BlacklistEntry, Sport } from '../types/index.ts';
+import { BlacklistEntry, Sport, Rating } from '../types/index.ts';
 import {
   User,
   Star,
@@ -13,18 +13,36 @@ import {
   Trash2,
   Calendar,
   Sparkles,
+  Crown,
+  Edit2,
+  MessageSquare,
+  X,
+  Save,
+  Phone,
+  MapPin,
+  Image,
 } from 'lucide-react';
 
 interface ProfileViewProps {
   sports: Sport[];
+  onOpenSubscriptions?: () => void;
 }
 
-export const ProfileView: React.FC<ProfileViewProps> = ({ sports }) => {
-  const { currentUser, allUsers, refreshUser } = useAuth();
+export const ProfileView: React.FC<ProfileViewProps> = ({ sports, onOpenSubscriptions }) => {
+  const { currentUser, allUsers, refreshUser, updateProfile } = useAuth();
   const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
+  const [ratings, setRatings] = useState<Rating[]>([]);
   const [selectedUserToBlock, setSelectedUserToBlock] = useState('');
   const [blockReason, setBlockReason] = useState('Систематические опоздания и грубость');
   const [showBlockForm, setShowBlockForm] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+
+  // Edit form state
+  const [editFirstName, setEditFirstName] = useState(currentUser.firstName);
+  const [editLastName, setEditLastName] = useState(currentUser.lastName);
+  const [editPhone, setEditPhone] = useState(currentUser.phone);
+  const [editAvatarUrl, setEditAvatarUrl] = useState(currentUser.avatarUrl);
+  const [editLoading, setEditLoading] = useState(false);
 
   const fetchBlacklist = async () => {
     try {
@@ -39,9 +57,44 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ sports }) => {
     }
   };
 
+  const fetchRatings = async () => {
+    try {
+      const res = await fetch(`/api/users/${currentUser.id}/ratings`);
+      if (res.ok) {
+        setRatings(await res.json());
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     fetchBlacklist();
+    fetchRatings();
+    setEditFirstName(currentUser.firstName);
+    setEditLastName(currentUser.lastName);
+    setEditPhone(currentUser.phone);
+    setEditAvatarUrl(currentUser.avatarUrl);
   }, [currentUser.id]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditLoading(true);
+    try {
+      await updateProfile({
+        firstName: editFirstName,
+        lastName: editLastName,
+        phone: editPhone,
+        avatarUrl: editAvatarUrl,
+      });
+      setShowEditProfile(false);
+      refreshUser();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   const handleAddToBlacklist = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,6 +171,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ sports }) => {
             <p className="text-xs text-blue-600 font-semibold mt-0.5">
               г. {currentUser.cityName} • В клубе с {new Date(currentUser.createdAt).toLocaleDateString('ru-RU')}
             </p>
+            <div className="mt-2.5 flex items-center space-x-2">
+              <button
+                onClick={() => setShowEditProfile(true)}
+                className="px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center space-x-1"
+              >
+                <Edit2 className="w-3 h-3" />
+                <span>Редактировать</span>
+              </button>
+              {onOpenSubscriptions && (
+                <button
+                  onClick={onOpenSubscriptions}
+                  className="px-3 py-1 rounded-xl text-xs font-bold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors flex items-center space-x-1"
+                >
+                  <Crown className="w-3 h-3" />
+                  <span>Тариф: {currentUser.subscriptionPlanId === 'plan-club' ? 'Club' : currentUser.subscriptionPlanId === 'plan-organizer' ? 'Pro' : 'Free'}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -197,7 +268,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ sports }) => {
                   key={us.sportId}
                   className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between"
                 >
-                  <span className="font-bold text-xs text-slate-900">{sport?.name}</span>
+                  <span className="font-bold text-xs text-slate-900">
+                    {sport?.icon} {sport?.name}
+                  </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800">
                     {level?.name || 'Любитель'}
                   </span>
@@ -242,7 +315,63 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ sports }) => {
               ✓ ATTENDANCE_TRACKING
             </span>
           </div>
+
+          {onOpenSubscriptions && (
+            <div className="pt-2">
+              <button
+                onClick={onOpenSubscriptions}
+                className="text-xs text-purple-600 font-bold hover:underline flex items-center space-x-1"
+              >
+                <span>Управление тарифным планом →</span>
+              </button>
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Received Reviews and Ratings */}
+      <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-base text-slate-900 flex items-center space-x-2">
+            <MessageSquare className="w-5 h-5 text-amber-500" />
+            <span>Отзывы и оценки от игроков и организаторов</span>
+          </h3>
+          <span className="text-xs text-slate-400 font-semibold">{ratings.length} отзывов</span>
+        </div>
+
+        {ratings.length === 0 ? (
+          <div className="p-6 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl">
+            У вас пока нет отзывов. Участвуйте в играх, и другие игроки смогут поставить вам оценку!
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {ratings.map((r) => (
+              <div
+                key={r.id}
+                className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1 text-amber-500">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`w-3.5 h-3.5 ${
+                          star <= r.stars ? 'fill-current' : 'text-slate-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-slate-400">
+                    {new Date(r.createdAt).toLocaleDateString('ru-RU')}
+                  </span>
+                </div>
+                {r.reviewText && (
+                  <p className="text-xs text-slate-700 italic">«{r.reviewText}»</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Organizer Personal Blacklist (Section 13) */}
@@ -361,6 +490,84 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ sports }) => {
           )}
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {showEditProfile && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+              <h3 className="font-bold text-sm">Редактирование профиля</h3>
+              <button
+                onClick={() => setShowEditProfile(false)}
+                className="p-1.5 rounded-full hover:bg-white/10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="p-6 space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Имя</label>
+                <input
+                  type="text"
+                  required
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Фамилия</label>
+                <input
+                  type="text"
+                  required
+                  value={editLastName}
+                  onChange={(e) => setEditLastName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Телефон</label>
+                <input
+                  type="tel"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Ссылка на аватар (URL)</label>
+                <input
+                  type="url"
+                  value={editAvatarUrl}
+                  onChange={(e) => setEditAvatarUrl(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfile(false)}
+                  className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm"
+                >
+                  {editLoading ? 'Сохранение...' : 'Сохранить'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

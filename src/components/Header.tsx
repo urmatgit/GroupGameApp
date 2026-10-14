@@ -12,18 +12,27 @@ import {
   Check,
   Award,
   Sparkles,
+  BookOpen,
+  Crown,
+  LogIn,
 } from 'lucide-react';
 
 interface HeaderProps {
   currentTab: 'games' | 'my-games' | 'templates' | 'profile' | 'admin' | 'db';
   setCurrentTab: (tab: 'games' | 'my-games' | 'templates' | 'profile' | 'admin' | 'db') => void;
   onOpenCreateGame: () => void;
+  onOpenAuth?: () => void;
+  onOpenSubscriptions?: () => void;
+  onOpenRules?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentTab,
   setCurrentTab,
   onOpenCreateGame,
+  onOpenAuth,
+  onOpenSubscriptions,
+  onOpenRules,
 }) => {
   const {
     currentUser,
@@ -151,7 +160,29 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           {/* Right actions: Create Game, Notifications, Persona Switcher */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            {onOpenRules && (
+              <button
+                onClick={onOpenRules}
+                className="hidden xl:flex items-center space-x-1 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                title="Справочник и правила"
+              >
+                <BookOpen className="w-4 h-4 text-slate-500" />
+                <span>Правила</span>
+              </button>
+            )}
+
+            {onOpenSubscriptions && (
+              <button
+                onClick={onOpenSubscriptions}
+                className="hidden lg:flex items-center space-x-1 px-3 py-2 rounded-xl text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 transition-colors"
+                title="Тарифы и подписка"
+              >
+                <Crown className="w-3.5 h-3.5 text-purple-600" />
+                <span>Тарифы</span>
+              </button>
+            )}
+
             {/* Create Game Button */}
             <button
               onClick={onOpenCreateGame}
@@ -300,17 +331,56 @@ export const Header: React.FC<HeaderProps> = ({
                     ))}
                   </div>
 
-                  <div className="border-t border-slate-100 px-3 pt-2">
+                  <div className="border-t border-slate-100 px-3 pt-2 space-y-1">
                     <button
                       onClick={() => {
                         setCurrentTab('profile');
                         setShowUserDropdown(false);
                       }}
-                      className="w-full text-center py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center space-x-1.5"
+                      className="w-full text-center py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center space-x-1.5"
                     >
                       <UserIcon className="w-3.5 h-3.5" />
-                      <span>Перейти в мой профиль</span>
+                      <span>Мой профиль и статистика</span>
                     </button>
+
+                    {onOpenSubscriptions && (
+                      <button
+                        onClick={() => {
+                          onOpenSubscriptions();
+                          setShowUserDropdown(false);
+                        }}
+                        className="w-full text-center py-1.5 text-xs font-semibold text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex items-center justify-center space-x-1.5"
+                      >
+                        <Crown className="w-3.5 h-3.5" />
+                        <span>Тарифы и подписка</span>
+                      </button>
+                    )}
+
+                    {onOpenRules && (
+                      <button
+                        onClick={() => {
+                          onOpenRules();
+                          setShowUserDropdown(false);
+                        }}
+                        className="w-full text-center py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors flex items-center justify-center space-x-1.5"
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Правила платформы</span>
+                      </button>
+                    )}
+
+                    {onOpenAuth && (
+                      <button
+                        onClick={() => {
+                          onOpenAuth();
+                          setShowUserDropdown(false);
+                        }}
+                        className="w-full text-center py-1.5 text-xs font-semibold text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center justify-center space-x-1.5"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                        <span>Вход / Регистрация / Сменить</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

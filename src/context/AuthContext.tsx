@@ -5,6 +5,18 @@ interface AuthContextType {
   currentUser: User;
   allUsers: User[];
   switchUser: (userId: string) => void;
+  login: (email: string) => Promise<User>;
+  register: (payload: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    cityId: string;
+    sportId?: string;
+    levelId?: string;
+  }) => Promise<User>;
+  updateSubscription: (planId: string) => Promise<void>;
+  updateProfile: (updates: Partial<User>) => Promise<void>;
   notifications: NotificationItem[];
   unreadCount: number;
   markNotificationRead: (id: string) => Promise<void>;
@@ -100,6 +112,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const login = async (email: string): Promise<User> => {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка входа');
+    setCurrentUser(data.user);
+    await fetchUsers();
+    await refreshNotifications();
+    return data.user;
+  };
+
+  const register = async (payload: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    cityId: string;
+    sportId?: string;
+    levelId?: string;
+  }): Promise<User> => {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка регистрации');
+    setCurrentUser(data.user);
+    await fetchUsers();
+    await refreshNotifications();
+    return data.user;
+  };
+
+  const updateSubscription = async (planId: string) => {
+    const res = await fetch('/api/users/me/subscription', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': currentUser.id,
+      },
+      body: JSON.stringify({ planId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка изменения подписки');
+    setCurrentUser(data.user);
+    await refreshNotifications();
+  };
+
+  const updateProfile = async (updates: Partial<User>) => {
+    const res = await fetch('/api/users/me', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': currentUser.id,
+      },
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка обновления профиля');
+    setCurrentUser(data);
+    await fetchUsers();
+  };
+
   const markNotificationRead = async (id: string) => {
     try {
       await fetch(`/api/notifications/${id}/read`, {
@@ -134,6 +212,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUser,
         allUsers,
         switchUser,
+        login,
+        register,
+        updateSubscription,
+        updateProfile,
         notifications,
         unreadCount,
         markNotificationRead,

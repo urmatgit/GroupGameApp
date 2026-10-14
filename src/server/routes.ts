@@ -54,6 +54,21 @@ apiRouter.post('/auth/register', (req: Request, res: Response) => {
   res.status(201).json({ token: newUser.id, user: newUser });
 });
 
+apiRouter.post('/auth/forgot-password', (req: Request, res: Response) => {
+  const { email } = req.body;
+  const user = store.users.find((u) => u.email.toLowerCase() === email?.toLowerCase());
+  // Even if not found, simulate secure response
+  if (user) {
+    store.addNotification(
+      user.id,
+      'REMINDER',
+      'Запрос на сброс пароля',
+      'Был получен запрос на сброс пароля. Если это были не вы, проигнорируйте это сообщение.'
+    );
+  }
+  res.json({ success: true, message: 'Инструкции по восстановлению пароля отправлены на указанный email' });
+});
+
 apiRouter.get('/users/me', (req: Request, res: Response) => {
   const userId = getUserId(req);
   const user = store.getUserById(userId);
@@ -66,6 +81,17 @@ apiRouter.put('/users/me', (req: Request, res: Response) => {
   try {
     const updated = store.updateUser(userId, req.body);
     res.json(updated);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/users/me/subscription', (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const { planId } = req.body;
+  try {
+    const result = store.changeSubscription(userId, planId);
+    res.json(result);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
@@ -124,6 +150,16 @@ apiRouter.post('/games', (req: Request, res: Response) => {
       organizerId: userId,
     });
     res.status(201).json(newGame);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+apiRouter.put('/games/:id', (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  try {
+    const updated = store.updateGame(req.params.id, userId, req.body);
+    res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }

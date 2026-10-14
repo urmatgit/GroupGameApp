@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Game, Sport, Venue } from './types/index.ts';
+import { Game, Sport, Venue, City } from './types/index.ts';
 import { useAuth } from './context/AuthContext.tsx';
 import { Header } from './components/Header.tsx';
 import { FilterBar } from './components/FilterBar.tsx';
 import { GameCard } from './components/GameCard.tsx';
 import { GameDetailsModal } from './components/GameDetailsModal.tsx';
 import { CreateGameModal } from './components/CreateGameModal.tsx';
+import { EditGameModal } from './components/EditGameModal.tsx';
 import { AttendanceModal } from './components/AttendanceModal.tsx';
 import { RatingModal } from './components/RatingModal.tsx';
 import { ComplaintModal } from './components/ComplaintModal.tsx';
@@ -14,10 +15,31 @@ import { DatabaseSchemaModal } from './components/DatabaseSchemaModal.tsx';
 import { TemplatesView } from './components/TemplatesView.tsx';
 import { ProfileView } from './components/ProfileView.tsx';
 import { YandexMapView } from './components/YandexMapView.tsx';
-import { Sparkles, Calendar, CheckCircle2, AlertCircle, RefreshCw, Map, LayoutGrid } from 'lucide-react';
+import { SubscriptionsModal } from './components/SubscriptionsModal.tsx';
+import { RulesModal } from './components/RulesModal.tsx';
+import { AuthModal } from './components/AuthModal.tsx';
+import {
+  Sparkles,
+  Calendar,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  Map,
+  LayoutGrid,
+  Users,
+  Clock,
+  Award,
+  Crown,
+  BookOpen,
+  Shield,
+  Repeat,
+  User as UserIcon,
+  ChevronRight,
+  PlusCircle,
+} from 'lucide-react';
 
 export const App: React.FC = () => {
-  const { currentUser, activeCityId, refreshNotifications } = useAuth();
+  const { currentUser, activeCityId, refreshNotifications, unreadCount } = useAuth();
 
   const [currentTab, setCurrentTab] = useState<
     'games' | 'my-games' | 'templates' | 'profile' | 'admin' | 'db'
@@ -28,6 +50,7 @@ export const App: React.FC = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -38,12 +61,19 @@ export const App: React.FC = () => {
   const [availableOnly, setAvailableOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // My Games sub-category filter
+  const [myGamesFilter, setMyGamesFilter] = useState<'all' | 'main' | 'waitlist' | 'organizer' | 'completed'>('all');
+
   // Modals state
   const [selectedGameForDetails, setSelectedGameForDetails] = useState<Game | null>(null);
   const [showCreateGame, setShowCreateGame] = useState(false);
+  const [gameToEdit, setGameToEdit] = useState<Game | null>(null);
   const [attendanceGame, setAttendanceGame] = useState<Game | null>(null);
   const [ratingGame, setRatingGame] = useState<Game | null>(null);
   const [complaintGame, setComplaintGame] = useState<{ game?: Game; targetUserId?: string } | null>(null);
+  const [showSubscriptionsModal, setShowSubscriptionsModal] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -52,12 +82,14 @@ export const App: React.FC = () => {
 
   const fetchCatalogs = async () => {
     try {
-      const [resSports, resVenues] = await Promise.all([
+      const [resSports, resVenues, resCities] = await Promise.all([
         fetch('/api/sports'),
         fetch(`/api/venues?cityId=${activeCityId}`),
+        fetch('/api/cities'),
       ]);
-      if (resSports.ok) setSports(await resSports.ok ? await resSports.json() : []);
-      if (resVenues.ok) setVenues(await resVenues.ok ? await resVenues.json() : []);
+      if (resSports.ok) setSports(await resSports.json());
+      if (resVenues.ok) setVenues(await resVenues.json());
+      if (resCities.ok) setCities(await resCities.json());
     } catch (e) {
       console.error(e);
     }
@@ -185,23 +217,50 @@ export const App: React.FC = () => {
     }
   };
 
-  // Filter for "My Games" tab
-  const displayedGames =
-    currentTab === 'my-games'
-      ? games.filter((g) =>
-          g.participants.some(
-            (p) =>
-              p.userId === currentUser.id && (p.status === 'Main' || p.status === 'Waitlist')
-          )
-        )
-      : games;
+  // Filter for "My Games" subcategories
+  const myGamesAll = games.filter(
+    (g) =>
+      g.organizerId === currentUser.id ||
+      g.participants.some(
+        (p) =>
+          p.userId === currentUser.id && (p.status === 'Main' || p.status === 'Waitlist')
+      )
+  );
+
+  const myGamesMain = games.filter((g) =>
+    g.participants.some((p) => p.userId === currentUser.id && p.status === 'Main')
+  );
+
+  const myGamesWaitlist = games.filter((g) =>
+    g.participants.some((p) => p.userId === currentUser.id && p.status === 'Waitlist')
+  );
+
+  const myGamesOrganized = games.filter((g) => g.organizerId === currentUser.id);
+
+  const myGamesCompleted = games.filter(
+    (g) =>
+      g.status === 'Completed' &&
+      (g.organizerId === currentUser.id ||
+        g.participants.some((p) => p.userId === currentUser.id && p.status === 'Main'))
+  );
+
+  let displayedGames = games;
+  if (currentTab === 'my-games') {
+    if (myGamesFilter === 'main') displayedGames = myGamesMain;
+    else if (myGamesFilter === 'waitlist') displayedGames = myGamesWaitlist;
+    else if (myGamesFilter === 'organizer') displayedGames = myGamesOrganized;
+    else if (myGamesFilter === 'completed') displayedGames = myGamesCompleted;
+    else displayedGames = myGamesAll;
+  }
+
+  const isAdmin = currentUser.roles.includes('Administrator') || currentUser.roles.includes('Moderator');
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans pb-16 md:pb-0">
       {/* Toast message popup */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 text-xs font-semibold flex items-center space-x-2 animate-in slide-in-from-bottom duration-200">
-          <Sparkles className="w-4 h-4 text-blue-400" />
+        <div className="fixed bottom-20 md:bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 text-xs font-semibold flex items-center space-x-2 animate-in slide-in-from-bottom duration-200">
+          <Sparkles className="w-4 h-4 text-blue-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -211,6 +270,9 @@ export const App: React.FC = () => {
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
         onOpenCreateGame={() => setShowCreateGame(true)}
+        onOpenAuth={() => setShowAuthModal(true)}
+        onOpenSubscriptions={() => setShowSubscriptionsModal(true)}
+        onOpenRules={() => setShowRulesModal(true)}
       />
 
       {/* Page Content */}
@@ -218,20 +280,97 @@ export const App: React.FC = () => {
         {/* TAB: GAMES CATALOG & MY GAMES */}
         {(currentTab === 'games' || currentTab === 'my-games') && (
           <div className="space-y-6">
-            {/* Filter Bar */}
-            <FilterBar
-              sports={sports}
-              selectedSportId={selectedSportId}
-              setSelectedSportId={setSelectedSportId}
-              selectedLevelId={selectedLevelId}
-              setSelectedLevelId={setSelectedLevelId}
-              freeOnly={freeOnly}
-              setFreeOnly={setFreeOnly}
-              availableOnly={availableOnly}
-              setAvailableOnly={setAvailableOnly}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-            />
+            {/* Filter Bar (available on main catalog) */}
+            {currentTab === 'games' && (
+              <FilterBar
+                sports={sports}
+                selectedSportId={selectedSportId}
+                setSelectedSportId={setSelectedSportId}
+                selectedLevelId={selectedLevelId}
+                setSelectedLevelId={setSelectedLevelId}
+                freeOnly={freeOnly}
+                setFreeOnly={setFreeOnly}
+                availableOnly={availableOnly}
+                setAvailableOnly={setAvailableOnly}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+              />
+            )}
+
+            {/* Sub-Tabs for "My Games" */}
+            {currentTab === 'my-games' && (
+              <div className="flex flex-wrap items-center gap-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-xs">
+                <button
+                  onClick={() => setMyGamesFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                    myGamesFilter === 'all'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>Все мои</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${myGamesFilter === 'all' ? 'bg-white/20' : 'bg-slate-100'}`}>
+                    {myGamesAll.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setMyGamesFilter('main')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                    myGamesFilter === 'main'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>Основной состав</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${myGamesFilter === 'main' ? 'bg-white/20' : 'bg-slate-100'}`}>
+                    {myGamesMain.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setMyGamesFilter('waitlist')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                    myGamesFilter === 'waitlist'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>В очереди (Waitlist)</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${myGamesFilter === 'waitlist' ? 'bg-white/20' : 'bg-slate-100'}`}>
+                    {myGamesWaitlist.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setMyGamesFilter('organizer')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                    myGamesFilter === 'organizer'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>Я организатор</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${myGamesFilter === 'organizer' ? 'bg-white/20' : 'bg-slate-100'}`}>
+                    {myGamesOrganized.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setMyGamesFilter('completed')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                    myGamesFilter === 'completed'
+                      ? 'bg-slate-800 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>Завершённые</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${myGamesFilter === 'completed' ? 'bg-white/20' : 'bg-slate-100'}`}>
+                    {myGamesCompleted.length}
+                  </span>
+                </button>
+              </div>
+            )}
 
             {/* Title, Counter and View Mode Toggle */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -241,7 +380,7 @@ export const App: React.FC = () => {
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {displayedGames.length} матчей найдено
-                  {currentTab === 'my-games' && ' (где вы участник или в очереди)'}
+                  {currentTab === 'my-games' && ' (где вы участник, в очереди или организатор)'}
                 </p>
               </div>
 
@@ -298,9 +437,17 @@ export const App: React.FC = () => {
                 <h3 className="font-bold text-slate-700 text-sm">Игр не найдено</h3>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
                   {currentTab === 'my-games'
-                    ? 'Вы пока не записаны ни на один матч. Перейдите в каталог игр и запишитесь!'
+                    ? 'По выбранной категории игр не найдено. Запишитесь на матч в каталоге или создайте свою игру!'
                     : 'По выбранным фильтрам нет подходящих игр. Попробуйте сбросить фильтры или создать игру.'}
                 </p>
+                {currentTab === 'my-games' && (
+                  <button
+                    onClick={() => setCurrentTab('games')}
+                    className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 shadow-sm transition-all"
+                  >
+                    Перейти в каталог игр
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -324,7 +471,12 @@ export const App: React.FC = () => {
         )}
 
         {/* TAB: PROFILE & BLACKLIST */}
-        {currentTab === 'profile' && <ProfileView sports={sports} />}
+        {currentTab === 'profile' && (
+          <ProfileView
+            sports={sports}
+            onOpenSubscriptions={() => setShowSubscriptionsModal(true)}
+          />
+        )}
 
         {/* TAB: ADMIN PANEL */}
         {currentTab === 'admin' && <AdminView />}
@@ -332,6 +484,100 @@ export const App: React.FC = () => {
         {/* TAB: POSTGRESQL ARCHITECTURE */}
         {currentTab === 'db' && <DatabaseSchemaModal />}
       </main>
+
+      {/* Footer Info & Quick Links */}
+      <footer className="mt-auto border-t border-slate-200 bg-white py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <div className="flex items-center space-x-2">
+            <span className="font-bold text-slate-800">GroupGame Platform</span>
+            <span>•</span>
+            <span>Кроссплатформенная спортивная система (C# .NET 9 + React 18 + PostgreSQL)</span>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setShowRulesModal(true)}
+              className="hover:text-blue-600 font-medium transition-colors"
+            >
+              Правила и Fair Play
+            </button>
+            <button
+              onClick={() => setShowSubscriptionsModal(true)}
+              className="hover:text-purple-600 font-medium transition-colors"
+            >
+              Тарифы и подписка
+            </button>
+            <button
+              onClick={() => setCurrentTab('db')}
+              className="hover:text-emerald-600 font-medium transition-colors"
+            >
+              PostgreSQL DDL
+            </button>
+          </div>
+        </div>
+      </footer>
+
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-3 flex items-center justify-around shadow-lg">
+        <button
+          onClick={() => setCurrentTab('games')}
+          className={`flex flex-col items-center py-1 px-2 rounded-xl text-[10px] font-bold ${
+            currentTab === 'games' ? 'text-blue-600' : 'text-slate-500'
+          }`}
+        >
+          <Calendar className="w-5 h-5 mb-0.5" />
+          <span>Игры</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentTab('my-games')}
+          className={`flex flex-col items-center py-1 px-2 rounded-xl text-[10px] font-bold ${
+            currentTab === 'my-games' ? 'text-blue-600' : 'text-slate-500'
+          }`}
+        >
+          <Users className="w-5 h-5 mb-0.5" />
+          <span>Мои</span>
+        </button>
+
+        <button
+          onClick={() => setShowCreateGame(true)}
+          className="flex flex-col items-center py-1 px-2 text-[10px] font-bold text-white bg-blue-600 rounded-2xl shadow-md -mt-4 p-2.5"
+        >
+          <PlusCircle className="w-5 h-5" />
+        </button>
+
+        <button
+          onClick={() => setCurrentTab('templates')}
+          className={`flex flex-col items-center py-1 px-2 rounded-xl text-[10px] font-bold ${
+            currentTab === 'templates' ? 'text-blue-600' : 'text-slate-500'
+          }`}
+        >
+          <Repeat className="w-5 h-5 mb-0.5" />
+          <span>Шаблоны</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentTab('profile')}
+          className={`flex flex-col items-center py-1 px-2 rounded-xl text-[10px] font-bold ${
+            currentTab === 'profile' ? 'text-blue-600' : 'text-slate-500'
+          }`}
+        >
+          <UserIcon className="w-5 h-5 mb-0.5" />
+          <span>Профиль</span>
+        </button>
+
+        {isAdmin && (
+          <button
+            onClick={() => setCurrentTab('admin')}
+            className={`flex flex-col items-center py-1 px-2 rounded-xl text-[10px] font-bold ${
+              currentTab === 'admin' ? 'text-purple-600' : 'text-slate-500'
+            }`}
+          >
+            <Shield className="w-5 h-5 mb-0.5" />
+            <span>Админ</span>
+          </button>
+        )}
+      </div>
 
       {/* MODALS */}
       {selectedGameForDetails && (
@@ -344,6 +590,10 @@ export const App: React.FC = () => {
           onOpenAttendance={(g) => setAttendanceGame(g)}
           onOpenRating={(g) => setRatingGame(g)}
           onOpenComplaint={(g, targetUserId) => setComplaintGame({ game: g, targetUserId })}
+          onOpenEdit={(g) => {
+            setSelectedGameForDetails(null);
+            setGameToEdit(g);
+          }}
         />
       )}
 
@@ -355,6 +605,18 @@ export const App: React.FC = () => {
           onCreated={() => {
             fetchGames();
             showToast('Игра успешно опубликована в каталоге!');
+          }}
+        />
+      )}
+
+      {gameToEdit && (
+        <EditGameModal
+          game={gameToEdit}
+          venues={venues}
+          onClose={() => setGameToEdit(null)}
+          onUpdated={() => {
+            fetchGames();
+            showToast('Параметры игры успешно обновлены!');
           }}
         />
       )}
@@ -389,6 +651,27 @@ export const App: React.FC = () => {
           onSubmitted={() => {
             showToast('Жалоба отправлена на рассмотрение модераторам.');
           }}
+        />
+      )}
+
+      {showSubscriptionsModal && (
+        <SubscriptionsModal
+          onClose={() => setShowSubscriptionsModal(false)}
+          onPlanChanged={() => {
+            showToast('Тарифный план обновлен.');
+          }}
+        />
+      )}
+
+      {showRulesModal && (
+        <RulesModal onClose={() => setShowRulesModal(false)} />
+      )}
+
+      {showAuthModal && (
+        <AuthModal
+          cities={cities}
+          sports={sports}
+          onClose={() => setShowAuthModal(false)}
         />
       )}
     </div>
