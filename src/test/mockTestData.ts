@@ -1,0 +1,192 @@
+import { Game, Sport, Venue, User, SubscriptionPlan } from '../types/index.ts';
+
+export const mockUser: User = {
+  id: 'user-player-dmitry',
+  email: 'dmitry.player@mail.ru',
+  firstName: 'Дмитрий',
+  lastName: 'Иванов',
+  avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+  phone: '+7 (926) 333-22-11',
+  cityId: 'city-1',
+  cityName: 'Москва',
+  roles: ['User'],
+  status: 'Active',
+  createdAt: '2025-03-15T12:00:00Z',
+  sports: [{ sportId: 'sport-volleyball', levelId: 'lvl-vb-2' }],
+  subscriptionPlanId: 'plan-free',
+  stats: {
+    gamesOrganized: 2,
+    gamesPlayed: 19,
+    attendedCount: 19,
+    noShowCount: 0,
+    rating: 4.8,
+    ratingsCount: 16,
+  },
+};
+
+export const mockOrganizer: User = {
+  id: 'user-organizer-alexey',
+  email: 'alexey.organizer@yandex.ru',
+  firstName: 'Алексей',
+  lastName: 'Смирнов',
+  avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+  phone: '+7 (916) 111-22-33',
+  cityId: 'city-1',
+  cityName: 'Москва',
+  roles: ['User'],
+  status: 'Active',
+  createdAt: '2025-01-10T10:00:00Z',
+  sports: [{ sportId: 'sport-volleyball', levelId: 'lvl-vb-3' }],
+  subscriptionPlanId: 'plan-club',
+  stats: {
+    gamesOrganized: 45,
+    gamesPlayed: 52,
+    attendedCount: 52,
+    noShowCount: 0,
+    rating: 4.9,
+    ratingsCount: 38,
+  },
+};
+
+export const mockSports: Sport[] = [
+  {
+    id: 'sport-volleyball',
+    name: 'Волейбол',
+    icon: '🏐',
+    description: 'Классический волейбол 6х6 в зале',
+    levels: [
+      { id: 'lvl-vb-1', sportId: 'sport-volleyball', name: 'Новичок', order: 1 },
+      { id: 'lvl-vb-2', sportId: 'sport-volleyball', name: 'Любитель', order: 2 },
+      { id: 'lvl-vb-3', sportId: 'sport-volleyball', name: 'Продвинутый', order: 3 },
+    ],
+  },
+  {
+    id: 'sport-football',
+    name: 'Мини-футбол',
+    icon: '⚽',
+    description: 'Футзал 5х5 на паркете',
+    levels: [
+      { id: 'lvl-fb-1', sportId: 'sport-football', name: 'Новичок', order: 1 },
+      { id: 'lvl-fb-2', sportId: 'sport-football', name: 'Любитель', order: 2 },
+    ],
+  },
+];
+
+export const mockVenues: Venue[] = [
+  {
+    id: 'venue-1',
+    cityId: 'city-1',
+    name: 'СК «Динамо» Волейбол Арена',
+    address: 'ул. Василисы Кожиной, д. 13',
+    metro: 'Филёвский парк',
+    facilities: ['Парковка', 'Раздевалки', 'Душ', 'Профессиональный паркет'],
+    latitude: 55.7423,
+    longitude: 37.4981,
+  },
+];
+
+export const mockOpenGame: Game = {
+  id: 'game-open-1',
+  templateId: null,
+  organizerId: mockOrganizer.id,
+  organizer: {
+    id: mockOrganizer.id,
+    firstName: mockOrganizer.firstName,
+    lastName: mockOrganizer.lastName,
+    avatarUrl: mockOrganizer.avatarUrl,
+    rating: mockOrganizer.stats.rating,
+  },
+  sportId: 'sport-volleyball',
+  sportName: 'Волейбол',
+  levelId: 'lvl-vb-2',
+  levelName: 'Любитель',
+  title: 'Волейбол 6х6 (Уверенные любители)',
+  venueId: mockVenues[0].id,
+  venueName: mockVenues[0].name,
+  venueAddress: mockVenues[0].address,
+  startDateTime: '2026-10-20T18:00:00Z',
+  endDateTime: '2026-10-20T20:00:00Z',
+  timeZone: 'Europe/Moscow',
+  maxPlayers: 12,
+  price: 600,
+  currency: 'RUB',
+  description: 'Играем 3 партии до 25 очков.',
+  rules: 'Сменная обувь с non-marking подошвой.',
+  cancellationDeadlineHours: 3,
+  status: 'Open',
+  participants: [
+    {
+      id: 'p-1',
+      gameId: 'game-open-1',
+      userId: mockOrganizer.id,
+      user: {
+        id: mockOrganizer.id,
+        firstName: mockOrganizer.firstName,
+        lastName: mockOrganizer.lastName,
+        avatarUrl: mockOrganizer.avatarUrl,
+        rating: 4.9,
+      },
+      status: 'Main',
+      joinedAt: '2026-10-14T10:00:00Z',
+    },
+  ],
+  mainCount: 1,
+  waitlistCount: 0,
+  createdAt: '2026-10-14T10:00:00Z',
+  updatedAt: '2026-10-14T10:00:00Z',
+};
+
+export const mockFullGame: Game = {
+  ...mockOpenGame,
+  id: 'game-full-1',
+  title: 'Волейбол (Полный состав)',
+  maxPlayers: 2,
+  mainCount: 2,
+  waitlistCount: 1,
+  status: 'Full',
+  participants: [
+    {
+      id: 'p-1',
+      gameId: 'game-full-1',
+      userId: mockOrganizer.id,
+      user: {
+        id: mockOrganizer.id,
+        firstName: mockOrganizer.firstName,
+        lastName: mockOrganizer.lastName,
+        avatarUrl: mockOrganizer.avatarUrl,
+        rating: 4.9,
+      },
+      status: 'Main',
+      joinedAt: '2026-10-14T10:00:00Z',
+    },
+    {
+      id: 'p-2',
+      gameId: 'game-full-1',
+      userId: 'user-another',
+      user: {
+        id: 'user-another',
+        firstName: 'Иван',
+        lastName: 'Петров',
+        avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+        rating: 4.7,
+      },
+      status: 'Main',
+      joinedAt: '2026-10-14T10:05:00Z',
+    },
+    {
+      id: 'p-3',
+      gameId: 'game-full-1',
+      userId: mockUser.id,
+      user: {
+        id: mockUser.id,
+        firstName: mockUser.firstName,
+        lastName: mockUser.lastName,
+        avatarUrl: mockUser.avatarUrl,
+        rating: 4.8,
+      },
+      status: 'Waitlist',
+      queuePosition: 1,
+      joinedAt: '2026-10-14T10:10:00Z',
+    },
+  ],
+};

@@ -7,3 +7,5 @@ dist-server/
 *.log
 bun.lock
 bun.lockb
+test-results/
+playwright-report/

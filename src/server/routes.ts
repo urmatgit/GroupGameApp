@@ -296,6 +296,49 @@ apiRouter.post('/notifications/read-all', (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
+apiRouter.delete('/notifications/:id', (req: Request, res: Response) => {
+  store.deleteNotification(req.params.id);
+  res.json({ success: true });
+});
+
+apiRouter.delete('/notifications', (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  store.clearAllNotifications(userId);
+  res.json({ success: true });
+});
+
+apiRouter.post('/notifications/test', (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  const { type, title, message, gameId } = req.body;
+  const sampleGame = store.games[0];
+  const notifType = type || 'WAITLIST_PROMOTED';
+  const targetGameId = gameId || (sampleGame ? sampleGame.id : undefined);
+  const targetGameTitle = sampleGame ? sampleGame.title : 'Вечерний волейбол';
+
+  let defaultTitle = 'Продвижение из очереди!';
+  let defaultMessage = `Вы переведены из очереди ожидания в основной состав игры «${targetGameTitle}»! Место подтверждено.`;
+
+  if (notifType === 'GAME_CANCELLED') {
+    defaultTitle = 'Матч отменён организатором';
+    defaultMessage = `К сожалению, игра «${targetGameTitle}» была отменена организатором по техническим причинам.`;
+  } else if (notifType === 'WAITLIST_ADVANCED') {
+    defaultTitle = 'Продвижение в очереди ожидания!';
+    defaultMessage = `В игре «${targetGameTitle}» освободилось место! Ваша позиция в очереди теперь: #1.`;
+  } else if (notifType === 'STATUS_CHANGED' || notifType === 'JOIN_CONFIRMED') {
+    defaultTitle = 'Статус записи изменён';
+    defaultMessage = `Ваша запись на игру «${targetGameTitle}» подтверждена в основном составе.`;
+  }
+
+  const notif = store.addNotification(
+    userId,
+    notifType,
+    title || defaultTitle,
+    message || defaultMessage,
+    targetGameId
+  );
+  res.status(201).json(notif);
+});
+
 // --- COMPLAINTS ---
 apiRouter.post('/complaints', (req: Request, res: Response) => {
   const userId = getUserId(req);

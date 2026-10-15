@@ -49,7 +49,11 @@ export const Header: React.FC<HeaderProps> = ({
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  const isAdmin = currentUser.roles.includes('Administrator') || currentUser.roles.includes('Moderator');
+  const isAdmin =
+    (currentUser?.roles || []).includes('Administrator') ||
+    (currentUser?.roles || []).includes('Moderator') ||
+    currentUser?.userRole === 'Admin' ||
+    currentUser?.userRole === 'Organizer';
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
@@ -268,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="hidden lg:block pr-1 text-xs">
                   <div className="font-bold text-slate-800 flex items-center space-x-1">
                     <span>{currentUser.firstName}</span>
-                    {currentUser.roles.includes('Administrator') && (
+                    {((currentUser?.roles || []).includes('Administrator') || currentUser?.userRole === 'Admin') && (
                       <span className="text-[10px] bg-purple-100 text-purple-700 px-1 rounded font-semibold">Админ</span>
                     )}
                   </div>
@@ -391,3 +395,5 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+
+export default Header;

@@ -450,7 +450,17 @@ class AppStore {
 
         // Re-index remaining waitlist positions
         waitlistMembers.slice(1).forEach((p, idx) => {
+          const oldPos = p.queuePosition;
           p.queuePosition = idx + 1;
+          if (oldPos !== p.queuePosition) {
+            this.addNotification(
+              p.userId,
+              'WAITLIST_ADVANCED',
+              'Продвижение в очереди ожидания!',
+              `В игре «${game.title}» освободилось место! Ваша новая позиция в очереди: #${p.queuePosition}.`,
+              game.id
+            );
+          }
         });
 
         promotedUser = this.getUserById(nextInLine.userId);
@@ -475,7 +485,17 @@ class AppStore {
         .filter((p) => p.status === 'Waitlist' && p.queuePosition != null)
         .sort((a, b) => (a.queuePosition ?? 999) - (b.queuePosition ?? 999));
       remainingWaitlist.forEach((p, idx) => {
+        const oldPos = p.queuePosition;
         p.queuePosition = idx + 1;
+        if (oldPos !== p.queuePosition) {
+          this.addNotification(
+            p.userId,
+            'WAITLIST_ADVANCED',
+            'Продвижение в очереди ожидания!',
+            `Ваша позиция в очереди игры «${game.title}» улучшилась: теперь вы #${p.queuePosition}.`,
+            game.id
+          );
+        }
       });
     }
 
@@ -774,6 +794,17 @@ class AppStore {
 
   public markAllNotificationsAsRead(userId: string): void {
     this.notifications.filter((n) => n.userId === userId).forEach((n) => (n.isRead = true));
+  }
+
+  public deleteNotification(id: string): void {
+    const idx = this.notifications.findIndex((n) => n.id === id);
+    if (idx !== -1) {
+      this.notifications.splice(idx, 1);
+    }
+  }
+
+  public clearAllNotifications(userId: string): void {
+    this.notifications = this.notifications.filter((n) => n.userId !== userId);
   }
 
   // --- Audit Logs ---

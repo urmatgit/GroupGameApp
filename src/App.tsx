@@ -17,6 +17,7 @@ import { ProfileView } from './components/ProfileView.tsx';
 import { YandexMapView } from './components/YandexMapView.tsx';
 import { SubscriptionsModal } from './components/SubscriptionsModal.tsx';
 import { RulesModal } from './components/RulesModal.tsx';
+import { MyGamesAnalytics } from './components/MyGamesAnalytics.tsx';
 import { AuthModal } from './components/AuthModal.tsx';
 import {
   Sparkles,
@@ -299,7 +300,10 @@ export const App: React.FC = () => {
 
             {/* Sub-Tabs for "My Games" */}
             {currentTab === 'my-games' && (
-              <div className="flex flex-wrap items-center gap-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-xs">
+              <>
+                <MyGamesAnalytics games={games} currentUser={currentUser} />
+
+                <div className="flex flex-wrap items-center gap-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-xs">
                 <button
                   onClick={() => setMyGamesFilter('all')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
@@ -370,6 +374,7 @@ export const App: React.FC = () => {
                   </span>
                 </button>
               </div>
+              </>
             )}
 
             {/* Title, Counter and View Mode Toggle */}
